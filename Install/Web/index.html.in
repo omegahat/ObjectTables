@@ -1,0 +1,75 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>RObjectTables package</title>
+<link rel="stylesheet" href="OmegaTech.css">
+</head>
+
+<body>
+<h1>The RObjectTables package</h1>
+
+This package allows one to use R objects and functions to define
+classes of objects that can be attached to the R search path and used
+to manage variables that are available to the R user.  The primary
+motivation is to allow external data from other applications,
+languages, storage formats, etc. be treated as R variables without
+explicit conversion by the user.  The mechanism also allows one to
+provide different types of tables for handling regular R objects.
+Some applications include
+<dl>
+  <dt>
+  <li> Attaching variables from other languages such as
+      Python, Perl, Java, JavaScript.
+  <dd>
+  <dt>
+  <li> Datasets from other connected or embedded applications
+      such as Relational Database Management tables,
+      ggobi, etc.
+  <dd>
+
+  <dt>
+  <li> The CORBA naming service which is a hierarchical
+      collection  of name-object bindings.
+  <dd>
+  <dt>
+  <li> Implementing serialization using a different formats
+      such as XML, SAS, SPlus, Matlab.
+  <dd>
+  <dt> Serializing and deserializing to a directory,
+      or a remote server such as an HTTP or FTP directory.
+  <dd>
+  <dt>
+  <li> Support type specification and  checking of variables.
+  <dd>
+  <dt> Visualization of the contents using RGtk or Tcltk.
+  <dd>
+</dl>
+
+<h2>Download</h2>
+<dl>
+  <dt><a href="@TAR_FILE@">@TAR_FILE@</a>
+  <dd>
+</dl>
+
+<h2>Documentation</h2>
+<dl>
+  <dt>
+  <li> An initial description of the mechanism.
+      <a href="RObjectTables.pdf">PDF</a> 
+  <dd>
+  <dt>
+  <li> <a href="RObjectTables-manual.pdf">The R manual for this package.</a>
+  <dd>
+  <dt>
+  <li> <a href="examples/index.html">Examples</a>
+  <dd>
+</dl>
+
+
+
+<hr>
+<address><a href="http://cm.bell-labs.com/stat/duncan">Duncan Temple Lang</a>
+<a href=mailto:duncan@research.bell-labs.com>&lt;duncan@research.bell-labs.com&gt;</a></address>
+<!-- hhmts start -->
+Last modified: Tue Dec  4 12:23:23 EST 2001
+<!-- hhmts end -->
+</body> </html>

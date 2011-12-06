@@ -1,0 +1,46 @@
+createRPackage::
+
+include $(OMEGA_HOME)/Config/GNUmakefile.PackageConfig
+
+MAN_FILES=$(shell find man -name '*.Rd')
+
+WRITEUPS=Docs/RObjectTables.pdf
+# $(WRITEUPS:%.pdf=%.tex) \
+
+DOC_FILES=$(WRITEUPS) \
+          $(OMEGA_HOME)/Docs/OmegaTech.css $(OMEGA_HOME)/Docs/html.css \
+          
+#MAN_FILES=$(RD_HELP_FILES) $(XML_HELP_FILES)
+
+#doc:
+#	echo $(DOC_FILES)
+
+C_SRC_FILES=\
+  $(C_SRC)
+
+LOCAL_HEADERS= RUserTables.h
+
+C_INCLUDE_FILES=\
+  $(LOCAL_HEADERS) 
+
+R_SRC_FILES=First.lib RClosureTable.S RFunctionTable.S db.S DirectoryTable.S
+
+R_SRC_FILES:=$(R_SRC_FILES:%=Src/%)   
+
+DEPENDS= $(C_INCLUDE_FILES) $(C_SRC_FILES)  $(RD_HELP_FILES)
+
+DEPENDS+=$(DOC_FILES)
+
+R_PACKAGE_FILES+= plugin.xml plugin-new.xml
+
+include $(OMEGA_HOME)/Config/GNUmakefile.PackageRules
+
+createRPackage::
+	touch $(R_WORK_PACKAGE)/install.R
+
+
+Docs/%.html: Docs/%.xml
+	$(MAKE) -C $(@D) $(@F)
+
+man/%.Rd: man/%.xml
+	$(MAKE) -C $(@D) $(@F)

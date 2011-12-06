@@ -1,0 +1,17 @@
+Package: @PKG_NAME@
+Version: @MAJOR_VERSION@.@MINOR_VERSION@
+Date:    @DATE@
+Title: User-level attach()'able table support
+Author:  Duncan Temple Lang <duncan@research.bell-labs.com>
+Depends: R (>= 1.5.0)
+Maintainer: Duncan Temple Lang <duncan@research.bell-labs.com>
+Description: The C and S code allows one to define R objects
+     to be used as elements of the search path with their own
+     semantics and facilities for reading and writing variables.
+     The objects implement a simple interface via R functions 
+     (either methods or closures) and can access external data,
+     e.g. in other applications, languages, formats, ...
+License: GPL
+URL:  http://www.omegahat.org/RObjectTables,  http://www.omegahat.org
+      http://www.omegahat.org/bugs
+

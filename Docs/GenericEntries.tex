@@ -1,0 +1,197 @@
+\documentclass{article}
+\usepackage{fullpage}
+\usepackage{times}
+
+\input{WebMacros}
+\input{pstricks}
+\input{SMacros}
+\input{CMacros}
+
+\title{External Values as R Variables: Attaching arbitrary data to R's
+  search path}
+\author{Duncan Temple Lang}
+\date{}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+  
+This document outlines changes to the internal code for elements of
+the search path and generally databases in the S4 sense so that users
+can define their own database types.  The model follows the S4
+approach in which each database ``class'' or type must support five
+(5) methods: exists, get, assign, remove and objects.  The motivation
+is to allow databases providing name-value bindings for values that
+are external to R.  These include relational databases and tables;
+tables from other languages and systems such as Omegahat, Java, Perl,
+Python, etc.; naming services such as CORBA; archives such as zip and
+tar files; and so on.
+The basic model mimics that defined in S4 \cite{S4:databases},
+and we add a dynamic and lazy  lookup mechanism to aid
+with external synchronization.
+
+\end{abstract}
+
+\section{Motivation}
+
+External data sources.
+Provide name-value bindings.
+The values are external objects that need not be brought
+into R until the last minute.
+
+Database tables:
+\begin{verbatim}
+  attach(dbTable())
+  col1
+      gets reference to col1
+  mean(col1) 
+      select mean(col1) from table;
+  length(col1)
+      select count(col1) from table;
+\end{verbatim}
+
+
+Live-variables from foreign embedded systems: Perl, Python, Java, JavaScript.
+   (Matlab/Octave)
+
+Static/Serialized objects from foreign systems:
+
+CORBA
+
+Archive files: Tar, zip
+
+URIs: FTP \& HTTP directories
+
+Methods for dispatching on databases.
+
+\section{Dynamic versus Static Object Lists}
+
+Lazy versus eager object listing. \\
+Infinite recursion.
+
+Listeners: polling versus event notification.
+ CORBA events, GTK, directory stat, RDBMS triggers,
+\\
+ threads, file descriptors, $\ldots$
+
+Static can be implemented using onAttach
+
+\section{Database Interface}
+
+An object that is to be attached must implement the interface
+``Database''. This means that it must support methods for
+\SFunction{exists}, \SFunction{get}, \SFunction{remove},
+\SFunction{assign} and \SFunction{objects}.  (The \SFunction{exists}
+function can be inherited from the default method which performs a
+linear search through the vector returned from a call to
+\SFunction{objects}.)
+
+Each database might have a C representation of the following
+form
+\begin{verbatim}
+
+typedef Rboolean (*Rdb_exists)(const char *name, R_SearchPathElement *);
+typedef SEXP     (*Rdb_get)(const char *name, R_SearchPathElement *);
+typedef SEXP     (*Rdb_remove)(const char *name, R_SearchPathElement *);
+typedef SEXP     (*Rdb_assign)(const char *name, SEXP value, R_SearchPathElement *);
+typedef SEXP     (*Rdb_objects)(R_SearchPathElement *);
+
+typedef struct  _R_SearchPathElement{
+
+  int       type;
+  char    **cachedNames;
+
+  Rdb_exists  exists;
+  Rdb_get     get;
+  Rdb_remove  remove;
+  Rdb_assign  assign;
+  Rdb_objects objects;
+  
+  void     *privateData;
+
+} R_SearchPathElement;
+\end{verbatim}
+
+We don't need the exists.  We do want \Croutine{attach} and
+\Croutine{detach} routines.
+
+The \Croutine{onAttach} and \Croutine{onDetach} routines allow one to
+perform constructor and destructor actions such as creating a
+temporary working directory, caching the names of the objects,
+throwing an error if a connection to the remote system is not
+available, $\ldots$.
+
+
+
+Rather than introduce S-language level methods at this point, we
+require each instance of the SearchPathElement structure to provide
+routines that perform the dispatching.  We provide generic routines
+that will do the dispatching at the S-level. In this way, we have a
+class of SearchPathElement entries which are controlled at the user
+level. This will be relatively slow, so people will want to specialize
+these types of databases where and when it is possible.
+
+\begin{verbatim}
+SEXP createUserLevelDatabase(...) {
+
+ R_SearchPathElement *el = (R_SearchPathElement *) malloc(sizeof(R_SearchPathElement));
+ el->exists = Rdb_MethodExists;
+ el->get = Rdb_MethodGet;
+ el->remove = Rdb_MethodRemove;
+ el->assign = Rdb_MethodAssign;
+ el->objects = Rdb_MethodObjects;
+
+ ...
+
+ return(el);
+}
+\end{verbatim}
+
+
+Each database/search path element can cache the names of the variables
+it contains using the \Cfield{cachedNames} field.  If the database
+sets this field, the R engine will assume the cache is up-to-date and
+use its own cache. When the cache is known to be out of date, the
+database should unset this value.
+
+
+\section{Implementation}
+In order to be able to use these attached objects in R,
+we need to be able to integrate them with the current code
+and have the R interpreter treat them as part of the
+search path but interact with them differently.
+
+We can Use Luke's external pointer mechanism to handle user-defined
+search path elements in a simple way.  The developer of a database
+type, say DB, provides a C routine that allocates the necessary C
+level structures and initializes them and stuffs them into a C object
+of type \CStruct{RObjectTable}. Along with this database specific
+class and instance data, they specify the C routines to be used for
+the five ($5$) methods defined by the R-Table interface
+(\Croutine{get}, \Croutine{exists}, \Croutine{objects},
+\Croutine{assign} and \Croutine{remove}). Again, these are fields in
+the \CStruct{RObjectTable}.)  We wrap the \CStruct{RObjectTable}
+instance into an R object. This is done using the
+\Croutine{R_MakeExternalPtr} routine and passed back to the R user as
+a ``regular'' R object.
+
+In principle, we could attach this R object directly.  Then in the C
+code that manipulates such objects (e.g. \Croutine{do_ls} associated
+with \SFunction{objects}, \Croutine{findVarInFrame} associated with
+\SFunction{get}, etc.), we would recognize the object as being of a
+particular and special type (e.g. having a class \SClass{Database})
+and handle it by calling its internal method routine.
+
+The only difficulty with this approach is that we also have to
+consider how the database co-exists with the other search path
+elements and how the R engine connects these.  Specifically, we have
+to deal with the enclosing environment of our user-defined table. R
+wants to check in one table and then in its parent table and so on
+when looking for variables.  We need to play consistently with this
+mechanism.
+
+
+What we propose is that we use the 
+
+\end{document}
+
